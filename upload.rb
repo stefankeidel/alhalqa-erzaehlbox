@@ -14,10 +14,10 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   json = JSON.parse(File.open(item, 'r').read)
 
   # upload video file to alhalqa server
-  #Net::SCP.start(ENV['SSH_HOST'], ENV['SSH_USER'], keys: [ENV['SSH_PRIVATE_KEY']], port: ENV['SSH_PORT']) do |scp|
-  #  puts 'SCP copy started for ' + json['videofile']
-    #scp.upload!(json['videofile'], config['upload_directory'])
-  #end
+  Net::SCP.start(ENV['SSH_HOST'], ENV['SSH_USER'], keys: [ENV['SSH_PRIVATE_KEY']], port: ENV['SSH_PORT']) do |scp|
+    puts 'SCP copy started for ' + json['videofile']
+    scp.upload!(json['videofile'], config['upload_directory'])
+  end
 
   #remote_media_path = config['upload_directory'] + File::SEPARATOR + File.basename(json['videofile'])
   remote_media_path = '/tmp/07-24-2015-14-24-12-recording.mp4'
