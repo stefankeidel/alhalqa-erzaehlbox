@@ -121,6 +121,30 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   raise "Representation upload seems to have failed. JSON was: #{rep}" unless rep['representation_id']
 
+  # create new story record
+  story = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_occurrences', endpoint: 'item',
+                             request_body: {
+                               intrinsic_fields: {
+                                 type_id: 'story',
+                               },
+                               preferred_labels: [
+                                 {
+                                   name: json['story_title'],
+                                   locale: translate_locale(json['locale'])
+                                 }
+                               ],
+                               attributes: {
+                                 long_description: [
+                                   {
+                                     long_description: json['story_description'],
+                                     locale: translate_locale(json['locale'])
+                                   }
+                                 ],
+                               }
+                             }
+
+  raise 'Creating the story record seems to have failed' unless story['occurrence_id']
+
   # create new object with user title and description, and relate to everything
   obj = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_objects', endpoint: 'item',
                              request_body: {
@@ -152,6 +176,12 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                                    {
                                      entity_id: entity_id,
                                      type_id: 'created'
+                                   }
+                                 ],
+                                 ca_occurrences: [
+                                   {
+                                     occurrence_id: story['occurrence_id'],
+                                     type_id: 'record'
                                    }
                                  ],
                                  # collection for all storytelling records
