@@ -3,7 +3,7 @@ local_directory:    /Users/stefan/Documents/projects/alhalqa/erzaehlbox/demo_con
 
 # Hostname für Service-Zugriff; sollte sich eigentlich nicht ändern
 hostname:           www.alhalqa-virtual.com
-url_root:           /admin
+url_root:           /admin/
 
 # Upload-Verzeichnis auf dem Remote Server, in das wir erst via SCP hochladen
 # und aus dem wir dann den Media-Import via Web Service initiieren

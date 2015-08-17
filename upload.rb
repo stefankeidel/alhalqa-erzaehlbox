@@ -4,6 +4,7 @@ Dotenv.load # load environment vars (CollectiveAccess auth credentials) from .en
 require 'collectiveaccess'
 require 'yaml'
 require 'json'
+require 'logger'
 require 'net/scp'
 
 #
@@ -27,15 +28,24 @@ end
 # end helpers
 #
 
+# setup logging
+logger = Logger.new(STDOUT)
+logger.level = Logger::INFO
+
 # load configuration
 config = YAML.load_file(File.dirname(__FILE__) + File::SEPARATOR + 'config.yml')
 
 # load directory contents
 Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
+  logger.info "Started processing #{item}"
+
   json = JSON.parse(File.open(item, 'r').read)
 
   # skip files that have already been uploaded
-  next if json['uploaded']
+  if json['uploaded']
+    logger.debug "Skipped #{item} because uploaded is true"
+    next
+  end
 
   media_file_name = File.basename(item, '.json') + '.mp4'
   media_file_path = config['local_directory'] + File::SEPARATOR + media_file_name
@@ -44,9 +54,10 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   # upload video file to alhalqa server
   Net::SCP.start(ENV['SSH_HOST'], ENV['SSH_USER'], keys: [ENV['SSH_PRIVATE_KEY']], port: ENV['SSH_PORT']) do |scp|
-    puts 'SCP copy started for ' + media_file_name
+    logger.info 'SCP copy started for ' + media_file_name
     scp.upload! media_file_path, config['upload_directory']
   end
+  logger.info 'SCP successful'
 
   # this is where the file is at on the remote server after the scp upload
   # note: directory contents should be nuked every once in a while
@@ -64,6 +75,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   if search_result['results'] && search_result['results'].first()['id']
     # if we found something, use that entity to relate to the newly created object
     entity_id = search_result['results'].first()['id']
+    logger.info "Found existing entity with id #{entity_id}. Name was #{json['name']}."
   else
     # if entity not found create new one using the name, phone# and email from JSON
     ent = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
@@ -94,6 +106,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
     if ent['entity_id']
       entity_id = ent['entity_id']
+      logger.info "Created new entity with id #{entity_id}. Name was #{json['name']}."
     else
       raise "couldnt create entity. returned json was #{ent}"
     end
@@ -120,6 +133,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                            }
 
   raise "Representation upload seems to have failed. JSON was: #{rep}" unless rep['representation_id']
+  logger.info "Created representation with id #{rep['representation_id']}"
 
   # create new story record
   story = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_occurrences', endpoint: 'item',
@@ -144,6 +158,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                              }
 
   raise 'Creating the story record seems to have failed' unless story['occurrence_id']
+  logger.info "Created story with id #{story['occurrence_id']}"
 
   # create new object with user title and description, and relate to everything
   obj = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_objects', endpoint: 'item',
@@ -203,6 +218,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                              }
 
   raise 'Creating the object seems to have failed' unless obj['object_id']
+  logger.info "Created object with id #{obj['object_id']}"
 
   # let's save the uploaded state in the json file so that we don't process it again
   json['uploaded'] = true
@@ -210,4 +226,5 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   File.open(item,'w') do |f|
     f.write(JSON.pretty_generate(json))
   end
+
 end
