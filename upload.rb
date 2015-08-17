@@ -54,7 +54,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   # upload video file to alhalqa server
   Net::SCP.start(ENV['SSH_HOST'], ENV['SSH_USER'], keys: [ENV['SSH_PRIVATE_KEY']], port: ENV['SSH_PORT']) do |scp|
-    logger.info 'SCP copy started for ' + media_file_name
+    logger.info 'SCP started for ' + media_file_name
     scp.upload! media_file_path, config['upload_directory']
   end
   logger.info 'SCP successful'
