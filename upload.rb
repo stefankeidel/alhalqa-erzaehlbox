@@ -56,7 +56,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   #remote_media_path = '/web/08-03-2015-12-53-12-recording.mp4'
 
   # try to find creator/person
-  search_result = CollectiveAccess.get hostname: 'providence.dev', table_name: 'ca_entities', endpoint: 'find',
+  search_result = CollectiveAccess.get hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'find',
                                 get_params: {
                                   q: 'ca_entity_labels.displayname:"' + json['name'] + '"', noCache: 1
                                 }
@@ -66,7 +66,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
     entity_id = search_result['results'].first()['id']
   else
     # if entity not found create new one using the name, phone# and email from JSON
-    ent = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_entities', endpoint: 'item',
+    ent = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
                          request_body: {
                            intrinsic_fields: {
                              type_id: 'real_person',
@@ -103,7 +103,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   raise 'couldnt figure out which entity to use' unless entity_id
 
   # create new object representation
-  rep = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_object_representations', endpoint: 'item',
+  rep = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_object_representations', endpoint: 'item',
                            request_body: {
                              intrinsic_fields: {
                                type_id: 'front',
@@ -122,7 +122,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   raise "Representation upload seems to have failed. JSON was: #{rep}" unless rep['representation_id']
 
   # create new story record
-  story = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_occurrences', endpoint: 'item',
+  story = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_occurrences', endpoint: 'item',
                              request_body: {
                                intrinsic_fields: {
                                  type_id: 'story',
@@ -146,7 +146,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   raise 'Creating the story record seems to have failed' unless story['occurrence_id']
 
   # create new object with user title and description, and relate to everything
-  obj = CollectiveAccess.put hostname: config['hostname'], table_name: 'ca_objects', endpoint: 'item',
+  obj = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_objects', endpoint: 'item',
                              request_body: {
                                intrinsic_fields: {
                                  type_id: 'video',
