@@ -1,4 +1,17 @@
+# lokales spooling verzeichnis, aus dem die JSON und mp4 Dateien gelesen werden
 local_directory:    /Users/stefan/Documents/projects/alhalqa/erzaehlbox/demo_content
-finished_directory: /Users/stefan/Documents/projects/alhalqa/erzaehlbox/done
+
+# Hostname für Service-Zugriff; sollte sich eigentlich nicht ändern
 hostname:           providence.dev
+
+# Upload-Verzeichnis auf dem Remote Server, in das wir erst via SCP hochladen
+# und aus dem wir dann den Media-Import via Web Service initiieren
 upload_directory:   /home/mediaupload/erzaehlbox
+
+#
+# Datensätze mit dem die neu erstellten Objekte verbunden werden sollen
+#
+# Sammlung, die alle Storytelling-Box-Datensätze enthält
+collection_id:      5
+# Set für den aktuellen Ausstellungsstandort
+set_id:             46
