@@ -43,7 +43,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   # skip files that have already been uploaded
   if json['uploaded']
-    logger.debug "Skipped #{item} because uploaded is true"
+    logger.info "Skipped #{item} because uploaded is true"
     next
   end
 
@@ -115,26 +115,6 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   raise 'couldnt figure out which entity to use' unless entity_id
 
-  # create new object representation
-  rep = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_object_representations', endpoint: 'item',
-                           request_body: {
-                             intrinsic_fields: {
-                               type_id: 'front',
-                               media: remote_media_path
-                             },
-                             preferred_labels: [
-                               {
-                                 # nobody should ever see this, but it helps identify
-                                 # records uploaded this script later
-                                 name: 'Automatically uploaded by Erzählbox',
-                                 locale: 'en_US'
-                               }
-                             ]
-                           }
-
-  raise "Representation upload seems to have failed. JSON was: #{rep}" unless rep['representation_id']
-  logger.info "Created representation with id #{rep['representation_id']}"
-
   # create new story record
   story = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_occurrences', endpoint: 'item',
                              request_body: {
@@ -181,12 +161,6 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                                  ],
                                },
                                related: {
-                                 ca_object_representations: [
-                                   {
-                                     representation_id: rep['representation_id']
-                                     # note: no rel type id
-                                   }
-                                 ],
                                  ca_entities: [
                                    {
                                      entity_id: entity_id,
@@ -214,7 +188,19 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                                      # note: no rel type id
                                    }
                                  ]
-                               }
+                               },
+                               representations: [
+                                 {
+                                   media: remote_media_path,
+                                   type: 'front',
+                                   access: 0,
+                                   status: 4,
+                                   locale: 'en_US',
+                                   values: {
+                                     name: 'Automatically uploaded by Erzählbox'
+                                   }
+                                 }
+                               ]
                              }
 
   raise 'Creating the object seems to have failed' unless obj['object_id']
