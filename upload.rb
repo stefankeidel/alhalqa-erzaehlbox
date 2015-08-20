@@ -41,9 +41,16 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   json = JSON.parse(File.open(item, 'r').read)
 
-  # skip files that have already been uploaded
-  if json['uploaded']
-    logger.info "Skipped #{item} because uploaded is true"
+  # let's save the uploaded state in the json file so that we don't process it again
+  json['isUploading'] = true
+
+  File.open(item,'w') do |f|
+    f.write(JSON.pretty_generate(json))
+  end
+
+  # skip files that have already been uploaded or are uploading right now
+  if json['uploaded'] || json['isUploading']
+    logger.info "Skipped #{item} because uploaded/isUploading is true"
     next
   end
 
@@ -66,54 +73,34 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   # for testing:
   #remote_media_path = '/web/08-03-2015-12-53-12-recording.mp4'
 
-  # try to find creator/person
-  search_result = CollectiveAccess.get hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'find',
-                                get_params: {
-                                  q: 'ca_entity_labels.displayname:"' + json['name'] + '"', noCache: 1
-                                }
-
-  if search_result['results'] && search_result['results'].first()['id']
-    # if we found something, use that entity to relate to the newly created object
-    entity_id = search_result['results'].first()['id']
-    logger.info "Found existing entity with id #{entity_id}. Name was #{json['name']}."
-  else
-    # if entity not found create new one using the name, phone# and email from JSON
-    ent = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
-                         request_body: {
-                           intrinsic_fields: {
-                             type_id: 'real_person',
-                             access: json['may_publish_name'] ? 1 : 0
-                           },
-                           preferred_labels: [
+  # if entity not found create new one using the name, phone# and email from JSON
+  entity = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
+                       request_body: {
+                         intrinsic_fields: {
+                           type_id: 'real_person',
+                           access: json['may_publish_name'] ? 1 : 0
+                         },
+                         preferred_labels: [
+                           {
+                             displayname: json['name'],
+                             locale: translate_locale(json['locale'])
+                           }
+                         ],
+                         attributes: {
+                           email: [
                              {
-                               displayname: json['name'],
-                               locale: translate_locale(json['locale'])
+                               email: json['email']
                              }
                            ],
-                           attributes: {
-                             email: [
-                               {
-                                 email: json['email']
-                               }
-                             ],
-                             phone: [
-                               {
-                                 phone: json['phone']
-                               }
-                             ]
-                           }
+                           phone: [
+                             {
+                               phone: json['phone']
+                             }
+                           ]
                          }
+                       }
 
-    if ent['entity_id']
-      entity_id = ent['entity_id']
-      logger.info "Created new entity with id #{entity_id}. Name was #{json['name']}."
-    else
-      raise "couldnt create entity. returned json was #{ent}"
-    end
-
-  end
-
-  raise 'couldnt figure out which entity to use' unless entity_id
+  raise 'Creating the entity record seems to have failed' unless entity['entity_id']
 
   # create new story record
   story = CollectiveAccess.put hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_occurrences', endpoint: 'item',
@@ -163,7 +150,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
                                related: {
                                  ca_entities: [
                                    {
-                                     entity_id: entity_id,
+                                     entity_id: entity['entity_id'],
                                      type_id: 'created'
                                    }
                                  ],
@@ -208,6 +195,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   # let's save the uploaded state in the json file so that we don't process it again
   json['uploaded'] = true
+  json['isUploading'] = false
 
   File.open(item,'w') do |f|
     f.write(JSON.pretty_generate(json))
