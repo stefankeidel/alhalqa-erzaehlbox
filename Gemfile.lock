@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    collectiveaccess (0.2.1)
+    collectiveaccess (0.2.2)
       httparty (~> 0.13)
     dotenv (2.0.2)
     httparty (0.13.5)
@@ -17,7 +17,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  collectiveaccess (= 0.2.1)
+  collectiveaccess (= 0.2.2)
   dotenv (~> 2.0.2)
   net-scp (~> 1.2.1)
 
