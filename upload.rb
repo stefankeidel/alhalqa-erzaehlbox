@@ -135,6 +135,8 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   object_body = {
     intrinsic_fields: {
       type_id: 'video',
+      access: 1,
+      idno: json['story_title'].to_s.downcase.gsub(/[^A-Za-z0-9]/, '_').slice(0,30)
     },
     preferred_labels: [
       {
@@ -177,7 +179,7 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
       {
         media: remote_media_path,
         type: 'front',
-        access: 0,
+        access: 1,
         status: 4,
         locale: 'en_US',
         values: {
