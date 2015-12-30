@@ -6,6 +6,7 @@ require 'yaml'
 require 'json'
 require 'logger'
 require 'net/scp'
+require 'optparse'
 
 #
 # helper functions
@@ -28,6 +29,15 @@ end
 # end helpers
 #
 
+# setup option parsing
+options = {}
+ignore_isuploading = false
+OptionParser.new do |opts|
+  opts.on("-i", "--ignore-isuploading-flag", "ignore isUploading flag in all JSON files for the current run") do |v|
+    ignore_isuploading = v
+  end
+end.parse!
+
 # setup logging
 logger = Logger.new(STDOUT)
 logger.level = Logger::INFO
@@ -42,7 +52,8 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   json = JSON.parse(File.open(item, 'r').read)
 
   # skip files that have already been uploaded or are uploading right now
-  if json['uploaded'] || json['isUploading']
+  # ignore the isUploading flag if -i is set
+  if json['uploaded'] || (!ignore_isuploading && json['isUploading'])
     logger.info "Skipped #{item} because uploaded/isUploading is true"
     next
   end
