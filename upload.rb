@@ -85,56 +85,59 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
   #remote_media_path = '/web/08-03-2015-12-53-12-recording.mp4'
 
   # if entity not found create new one using the name, phone# and email from JSON
-  entity = CollectiveAccess.put protocol: 'https', hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
-                       request_body: {
-                         intrinsic_fields: {
-                           type_id: 'real_person',
-                           access: json['may_publish_name'] ? 1 : 0
-                         },
-                         preferred_labels: [
-                           {
-                             displayname: json['name'],
-                             locale: translate_locale(json['locale'])
-                           }
-                         ],
-                         attributes: {
-                           email: [
-                             {
-                               email: json['email']
-                             }
-                           ],
-                           phone: [
-                             {
-                               phone: json['phone']
-                             }
-                           ]
-                         }
-                       }
-
-  raise 'Creating the entity record seems to have failed ' + "#{entity}" unless entity['entity_id']
+  if json['name'] && (json['name'].length > 0)
+    entity = CollectiveAccess.put protocol: 'https', hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_entities', endpoint: 'item',
+                                  request_body: {
+                                      intrinsic_fields: {
+                                          type_id: 'real_person',
+                                          access: json['may_publish_name'] ? 1 : 0
+                                      },
+                                      preferred_labels: [
+                                          {
+                                              displayname: json['name'],
+                                              locale: translate_locale(json['locale'])
+                                          }
+                                      ],
+                                      attributes: {
+                                          email: [
+                                              {
+                                                  email: json['email']
+                                              }
+                                          ],
+                                          phone: [
+                                              {
+                                                  phone: json['phone']
+                                              }
+                                          ]
+                                      }
+                                  }
+    raise 'Creating the entity record seems to have failed ' + "#{entity}" unless entity['entity_id']
+  else
+    entity = false
+  end
 
   # create new story record
   if json['story_title'] && (json['story_title'].length > 0)
     story = CollectiveAccess.put protocol: 'https', hostname: config['hostname'], url_root: config['url_root'], table_name: 'ca_occurrences', endpoint: 'item',
-                               request_body: {
-                                 intrinsic_fields: {
-                                   type_id: 'story',
-                                 },
-                                 preferred_labels: [
-                                   {
-                                     name: json['story_title'],
-                                     locale: translate_locale(json['locale'])
-                                   }
-                                 ],
-                                 attributes: {
-                                   long_description: [
-                                     {
-                                       long_description: json['story_description'],
-                                       locale: translate_locale(json['locale'])
+                                 request_body: {
+                                     intrinsic_fields: {
+                                         type_id: 'story',
+                                     },
+                                     preferred_labels: [
+                                         {
+                                             name: json['story_title'],
+                                             locale: translate_locale(json['locale'])
+                                         }
+                                     ],
+                                     attributes: {
+                                         long_description: [
+                                             {
+                                                 long_description: json['story_description'],
+                                                 locale: translate_locale(json['locale'])
+                                             }
+                                         ],
                                      }
-                                   ],
                                  }
-                               }
 
     raise 'Creating the story record seems to have failed' unless story['occurrence_id']
     logger.info "Created story with id #{story['occurrence_id']}"
@@ -144,68 +147,70 @@ Dir.glob(config['local_directory'] + File::SEPARATOR + '*.json') do |item|
 
   # create new object with user title and description, and relate to everything
   object_body = {
-    intrinsic_fields: {
-      type_id: 'video',
-      access: 1,
-      idno: json['story_title'].to_s.downcase.gsub(/[^A-Za-z0-9]/, '_').slice(0,30)
-    },
-    preferred_labels: [
-      {
-        name: json['story_title'],
-        locale: translate_locale(json['locale'])
-      }
-    ],
-    attributes: {
-      short_description: [
-        {
-          short_description: json['story_description'],
-          locale: translate_locale(json['locale'])
-        }
+      intrinsic_fields: {
+          type_id: 'video',
+          access: 1,
+          idno: json['story_title'].to_s.downcase.gsub(/[^A-Za-z0-9]/, '_').slice(0,30)
+      },
+      preferred_labels: [
+          {
+              name: json['story_title'],
+              locale: translate_locale(json['locale'])
+          }
       ],
-    },
-    related: {
-      ca_entities: [
-        {
-          entity_id: entity['entity_id'],
-          type_id: 'created'
-        }
-      ],
-      # collection for all storytelling records
-      ca_collections: [
-        {
-          collection_id: config['collection_id'],
-          type_id: 'part_of'
-        }
-      ],
-      # set for storytelling records from current exhibit 'stage'
-      # (starting in Berlin-Dahlem)
-      ca_sets: [
-        {
-          set_id: config['set_id']
-          # note: no rel type id
-        }
+      attributes: {
+          short_description: [
+              {
+                  short_description: json['story_description'],
+                  locale: translate_locale(json['locale'])
+              }
+          ],
+      },
+      related: {
+          # collection for all storytelling records
+          ca_collections: [
+              {
+                  collection_id: config['collection_id'],
+                  type_id: 'part_of'
+              }
+          ],
+          # set for storytelling records from current exhibit 'stage'
+          # (starting in Berlin-Dahlem)
+          ca_sets: [
+              {
+                  set_id: config['set_id']
+                  # note: no rel type id
+              }
+          ]
+      },
+      representations: [
+          {
+              media: remote_media_path,
+              type: 'front',
+              access: 1,
+              status: 4,
+              locale: 'en_US',
+              values: {
+                  name: 'Automatically uploaded by Erzählbox'
+              }
+          }
       ]
-    },
-    representations: [
-      {
-        media: remote_media_path,
-        type: 'front',
-        access: 1,
-        status: 4,
-        locale: 'en_US',
-        values: {
-          name: 'Automatically uploaded by Erzählbox'
-        }
-      }
-    ]
   }
 
   if story && story['occurrence_id']
     object_body[:related][:ca_occurrences] = [
-      {
-        occurrence_id: story['occurrence_id'],
-        type_id: 'record'
-      }
+        {
+            occurrence_id: story['occurrence_id'],
+            type_id: 'record'
+        }
+    ]
+  end
+  if entity && entity['entity_id']
+    object_body[:related][:ca_entities] = [
+        {
+            entity_id: entity['entity_id'],
+            type_id: 'created'
+        }
     ]
   end
 
